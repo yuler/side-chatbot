@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
- 
+import { transcribeAudio } from "@/lib/utils/audio" 
+
 // refs: https://platform.openai.com/docs/models
 const MODELS = [
   { id: 'gpt-4o-mini', name: 'GPt 4o mini'},
@@ -71,7 +72,7 @@ export default function ChatDemo(props: ChatDemoProps) {
           stop={stop}
           append={append}
           setMessages={setMessages}
-          // transcribeAudio={transcribeAudio}
+          transcribeAudio={transcribeAudio}
           suggestions={[
             "What is the weather in San Francisco?",
             "Explain step-by-step how to solve this math problem: If x² + 6x + 9 = 25, what is x?",

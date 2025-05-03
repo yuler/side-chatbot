@@ -1,6 +1,6 @@
 # side-chatbot
 
-Quickly from `pnpm dlx shadcn@latest init`
+<https://chatbot.yuler.dev>
 
 ## TechStack
 
