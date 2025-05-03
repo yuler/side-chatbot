@@ -66,12 +66,14 @@ export function MessageInput({
   const [selectedGlob, setSelectedGlob] = useState<boolean>(false)
   const [selectedLightbulb, setSelectedLightbulb] = useState<boolean>(false)
   const [selectedTelescope, setSelectedTelescope] = useState<boolean>(false)
+  const [selectedPalette, setSelectedPalette] = useState<boolean>(false)
+  const [selectedCanvas, setSelectedCanvas] = useState<boolean>(false)
 
   const { isListening, isSpeechSupported, isRecording, isTranscribing, audioStream, toggleListening, stopRecording } =
     useAudioRecording({
       transcribeAudio,
       onTranscriptionComplete: (text) => {
-        props.onChange?.({ target: { value: text } } as any)
+        props.onChange?.({ target: { value: text } } as React.ChangeEvent<HTMLTextAreaElement>)
       },
     })
 
@@ -145,6 +147,43 @@ export function MessageInput({
   }
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      const value = event.currentTarget.value;
+      const selectionStart = event.currentTarget.selectionStart;
+      
+      if (value.startsWith('Create Image ') && selectionStart <= 'Create Image '.length) {
+        event.preventDefault();
+        const newValue = value.substring('Create Image '.length);
+        props.onChange?.({ target: { value: newValue } } as React.ChangeEvent<HTMLTextAreaElement>);
+        
+        setSelectedPalette(false);
+        
+        setTimeout(() => {
+          if (textAreaRef.current) {
+            textAreaRef.current.selectionStart = 0;
+            textAreaRef.current.selectionEnd = 0;
+          }
+        }, 0);
+        return;
+      }
+      
+      if (value.startsWith('Canvas ') && selectionStart <= 'Canvas '.length) {
+        event.preventDefault();
+        const newValue = value.substring('Canvas '.length);
+        props.onChange?.({ target: { value: newValue } } as React.ChangeEvent<HTMLTextAreaElement>);
+        
+        setSelectedCanvas(false);
+        
+        setTimeout(() => {
+          if (textAreaRef.current) {
+            textAreaRef.current.selectionStart = 0;
+            textAreaRef.current.selectionEnd = 0;
+          }
+        }, 0);
+        return;
+      }
+    }
+
     if (submitOnEnter && event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
 
@@ -167,6 +206,74 @@ export function MessageInput({
 
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   const [textAreaHeight, setTextAreaHeight] = useState<number>(0)
+
+  const insertImagePrefix = () => {
+    if (selectedPalette) {
+      const newValue = props.value.slice('Create Image '.length)
+      props.onChange?.({ target: { value: newValue } } as React.ChangeEvent<HTMLTextAreaElement>);
+      setSelectedPalette(false)
+      return
+    }
+
+    // Clear other prefixes if they exist
+    let currentValue = props.value;
+    if (currentValue.startsWith('Canvas ')) {
+      currentValue = currentValue.substring('Canvas '.length);
+      setSelectedCanvas(false);
+    }
+    
+    const imagePrefix = 'Create Image ';
+    setSelectedPalette(true);
+    
+    const newValue = imagePrefix + currentValue;
+    props.onChange?.({ target: { value: newValue } } as React.ChangeEvent<HTMLTextAreaElement>);
+    
+    setTimeout(() => {
+      if (textAreaRef.current) {
+        textAreaRef.current.focus();
+      }
+    }, 0);
+  };
+  
+  // New function for Canvas prefix
+  const insertCanvasPrefix = () => {
+    if (selectedCanvas) {
+      const newValue = props.value.slice('Canvas '.length)
+      props.onChange?.({ target: { value: newValue } } as React.ChangeEvent<HTMLTextAreaElement>);
+      setSelectedCanvas(false)
+      return
+    }
+
+    // Clear other prefixes if they exist
+    let currentValue = props.value;
+    if (currentValue.startsWith('Create Image ')) {
+      currentValue = currentValue.substring('Create Image '.length);
+      setSelectedPalette(false);
+    }
+    
+    const canvasPrefix = 'Canvas ';
+    setSelectedCanvas(true);
+    
+    const newValue = canvasPrefix + currentValue;
+    props.onChange?.({ target: { value: newValue } } as React.ChangeEvent<HTMLTextAreaElement>);
+    
+    setTimeout(() => {
+      if (textAreaRef.current) {
+        textAreaRef.current.focus();
+      }
+    }, 0);
+  };
+
+  useEffect(() => {
+    if (props.value) {
+      if (!props.value.startsWith('Create Image ')) {
+        setSelectedPalette(false);
+      }
+      if (!props.value.startsWith('Canvas ')) {
+        setSelectedCanvas(false);
+      }
+    }
+  }, [props.value]);
 
   useEffect(() => {
     if (textAreaRef.current) {
@@ -201,10 +308,65 @@ export function MessageInput({
               showFileList && 'pb-16',
               className
             )}
+            style={{
+              caretColor: 'black',
+            }}
             {...(props.allowAttachments
               ? omit(props, ['allowAttachments', 'files', 'setFiles'])
               : omit(props, ['allowAttachments']))}
           />
+
+          {/* Create Image overlay */}
+          {props.value && props.value.startsWith('Create Image ') && (
+            <div 
+              className="absolute top-0 left-0 pointer-events-none z-20"
+              style={{
+                paddingTop: '10px',
+                paddingLeft: '8px'
+              }}
+            >
+              <span 
+                className="text-blue-600 font-bold text-sm"
+                style={{
+                  textShadow: '0 0 2px rgba(37, 99, 235, 0.5)',
+                  letterSpacing: '0',
+                  background: 'white',
+                }}
+              >
+                Create Image
+              </span>
+              
+              <span className="text-transparent font-bold">
+                {' '}
+              </span>
+            </div>
+          )}
+          
+          {/* Canvas overlay */}
+          {props.value && props.value.startsWith('Canvas ') && (
+            <div 
+              className="absolute top-0 left-0 pointer-events-none z-20"
+              style={{
+                paddingTop: '10px',
+                paddingLeft: '8px'
+              }}
+            >
+              <span 
+                className="text-blue-600 font-bold text-sm"
+                style={{
+                  textShadow: '0 0 2px rgba(37, 99, 235, 0.5)',
+                  letterSpacing: '0',
+                  background: 'white',
+                }}
+              >
+                Canvas
+              </span>
+              
+              <span className="text-transparent font-bold">
+                {' '}
+              </span>
+            </div>
+          )}
 
           {props.allowAttachments && (
             <div className="absolute inset-x-3 bottom-0 z-20 overflow-x-scroll py-3">
@@ -257,7 +419,7 @@ export function MessageInput({
             variant="outline"
             className={cn(
               "h-9 w-9 rounded-full cursor-pointer",
-              selectedGlob && "bg-blue-100 text-blue-600 border-blue-100"
+              selectedGlob && "bg-blue-100 text-blue-600 border-blue-100 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-100"
             )}
             aria-label="Web search"
             onClick={() => {
@@ -273,7 +435,7 @@ export function MessageInput({
             variant="outline"
             className={cn(
               "h-9 w-9 rounded-full cursor-pointer",
-              selectedLightbulb && "bg-blue-100 text-blue-600 border-blue-100"
+              selectedLightbulb && "bg-blue-100 text-blue-600 border-blue-100 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-100"
             )}
             aria-label="AI suggestions"
             onClick={() => {
@@ -289,7 +451,7 @@ export function MessageInput({
             variant="outline"
             className={cn(
               "h-9 w-9 rounded-full cursor-pointer",
-              selectedTelescope && "bg-blue-100 text-blue-600 border-blue-100"
+              selectedTelescope && "bg-blue-100 text-blue-600 border-blue-100 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-100"
             )}
             aria-label="Advanced search"
             onClick={() => {
@@ -304,14 +466,25 @@ export function MessageInput({
             type="button"
             size="icon"
             variant="outline"
-            className="h-9 w-9 rounded-full cursor-pointer"
-            aria-label="Attach a file"
+            className={cn(
+              "h-9 w-9 rounded-full cursor-pointer",
+              selectedPalette && "bg-blue-100 text-blue-600 border-blue-100 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-100"
+            )}
+            aria-label="Image generation"
+            onClick={insertImagePrefix}
           >
             <Palette className="h-4 w-4" />
           </Button>
           <Popover>
             <PopoverTrigger asChild>
-              <Button size="icon" variant="outline" className="h-9 w-9 rounded-full cursor-pointer">
+              <Button 
+                size="icon" 
+                variant="outline" 
+                className={cn(
+                  "h-9 w-9 rounded-full cursor-pointer",
+                  selectedCanvas && "bg-blue-100 text-blue-600 border-blue-100 hover:text-blue-600 hover:border-blue-100 hover:bg-blue-100"
+                )}
+              >
                 <Ellipsis className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
@@ -321,6 +494,7 @@ export function MessageInput({
                 className="flex items-center m-1.5 p-2.5 text-sm cursor-pointer focus-visible:outline-0 radix-disabled:pointer-events-none radix-disabled:opacity-50 group relative hover:bg-[#f5f5f5] focus-visible:bg-[#f5f5f5] radix-state-open:bg-[#f5f5f5] dark:hover:bg-token-main-surface-secondary dark:focus-visible:bg-token-main-surface-secondary rounded-md my-0 mx-2 dark:radix-state-open:bg-token-main-surface-secondary gap-2.5 px-1 py-2"
                 data-orientation="vertical"
                 data-radix-collection-item=""
+                onClick={insertCanvasPrefix}
               >
                 <div className="group inline-flex w-full items-center justify-start gap-2 ps-1.5 pe-3">
                   <div className="flex h-7 w-7 items-center justify-center gap-2.5">
